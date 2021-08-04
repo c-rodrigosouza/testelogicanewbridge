@@ -51,96 +51,76 @@ const agenda = [
   },
 ]
 
-function verificarHorarios(sol, age) {
+// Função para tratar a disponibilidade de cada cabeleireiro.
+function retornoDisponibilidade(age) {
+  let agendaCabeleireiro = []
+  let horaInicio = age.disponibilidade.inicio
+  let horaFim = age.disponibilidade.fim
+  let horaTemporario = horaInicio
 
-  let agendaDisponivel = []
-  
-  age.forEach((cabeleireiro) => {
-
-    let horariosDisponiveis = []
-    
-    let duracaoDoServico = (Number(sol.duracaoServico.split(':')[0]) * 60) + Number(sol.duracaoServico.split(':')[1])
-    let horarioInicial = (Number(cabeleireiro.disponibilidade.inicio.split(':')[0]) * 60) + Number(cabeleireiro.disponibilidade.inicio.split(':')[1])
-    let horarioFinal = (Number(cabeleireiro.disponibilidade.fim.split(':')[0]) * 60) + Number(cabeleireiro.disponibilidade.fim.split(':')[1])
-
-    let horariosConvertidos = cabeleireiro.horariosAgendados.map((value, index, element) => {
-      return {
-        inicio: (Number(value.inicio.split(':')[0]) * 60) + Number(Number(value.inicio.split(':')[1])),
-        fim: (Number(value.fim.split(':')[0]) * 60) + Number(Number(value.fim.split(':')[1]))
-      }
-    })
-
-    let temp = horarioInicial
-
-    // Estrutura de repetição que trata os horários a partir do inicio da jornada, até o primeiro corte
-    while (horariosConvertidos[0].inicio - temp >= duracaoDoServico) {
-      let conversor = [((temp - (temp % 60)) / 60).toString(), (temp % 60).toString()]
-
-      if (conversor[0].length === 1) {
-        conversor[0] = `0${conversor[0]}`
-      }
-
-      if (conversor[1].length === 1) {
-        conversor[1] = `${conversor[1]}0`
-      }
-
-      horariosDisponiveis.push(conversor.join(':'))
-      temp += 30
+  // Cria um array que adiciona todos os horários do cabeleireiro de 30 em 30 minutos, considerando todo o expediente.
+  agendaCabeleireiro.length =
+    (((Number(horaFim.split(':')[0]) * 60) + (Number(horaFim.split(':')[1]))) -
+      ((Number(horaInicio.split(':')[0]) * 60) + (Number(horaInicio.split(':')[1])))) / 30
+  agendaCabeleireiro.fill(0, 0)
+  agendaCabeleireiro = agendaCabeleireiro.map((val, ind) => {
+    if (ind !== 0) {
+      horaTemporario =
+        `${horaTemporario.split(':')[1] === '00'
+          ?
+          horaTemporario.split(':')[0]
+          :
+          (Number(horaTemporario.split(':')[0]) + 1).toString().length < 2
+            ? '0' + (Number(horaTemporario.split(':')[0]) + 1).toString()
+            : (Number(horaTemporario.split(':')[0]) + 1).toString()}:${horaTemporario.split(':')[1] === '00' ? '30' : '00'}`
     }
+    return horaTemporario
+  })
 
-    horariosConvertidos.forEach((value, index, element) => {
+  // Verifica os horários em que o cabeleireiro estará ocupado na agenda e substitui o tempo correspodente no array anterior pela string 'ocupado'.
+  age.horariosAgendados.forEach((val) => {
+    let inicioCorte = agendaCabeleireiro.indexOf(val.inicio)
+    let fimCorte = agendaCabeleireiro.indexOf(val.fim) >= 0 ? agendaCabeleireiro.indexOf(val.fim) : agendaCabeleireiro.length
+    agendaCabeleireiro.fill('ocupado', inicioCorte, fimCorte)
+  })
+  return agendaCabeleireiro
+}
 
-      temp = value.fim
+// Função que recebe o array com a agenda de todos os cabeleireiros e o tempo necessário para o procedimento que deseja agendar.
+function verificarHorarios(arrayAgenda, solic) {
 
-      if (element.length > index + 1) {
-        // Estrutura de repetição que trata os horários a partir do primeiro corte, até o último corte.
-        while (element[index + 1].inicio - temp >= duracaoDoServico) {
-          let conversor = [((temp - (temp % 60)) / 60).toString(), (temp % 60).toString()]
+  // Converte o tempo necessário em formato numérico, para saber espaços de 30 minutos o procedimento irá consumir.
+  let tempoNecessario = ((Number(solic.duracaoServico.split(':')[0]) * 60) + Number(solic.duracaoServico.split(':')[1])) / 30
+  let horariosDisponiveis = []
 
-          if (conversor[0].length === 1) {
-            conversor[0] = `0${conversor[0]}`
+  /* Tratando todos os cabeleireiros no array chamando a função retornoDisponibilidade() para saber os horários disponíveis e depois calculando onde
+  o procedimento que deseja-se agendar se encaixa. Depois disso, coloca os horários disponíveis e possíveis para o procedimento em um array. */
+  arrayAgenda.forEach((value) => {
+    let agendaCabeleireiro = retornoDisponibilidade(value)
+    let agendaCabeleireiroDisponivel = []
+    agendaCabeleireiro.forEach((val, ind, ele) => {
+      if (val !== 'ocupado' && ele.length >= ind + tempoNecessario) {
+        let tempoDisponivel = true
+        for (i = 1; i < tempoNecessario; i++) {
+          if (ele[ind + i] == 'ocupado') {
+            tempoDisponivel = false
+            break
           }
-
-          if (conversor[1].length === 1) {
-            conversor[1] = `${conversor[1]}0`
-          }
-
-          horariosDisponiveis.push(conversor.join(':'))
-          temp += 30
+        }
+        if (tempoDisponivel) {
+          agendaCabeleireiroDisponivel.push(val)
         }
       }
     })
 
-    temp = horariosConvertidos[horariosConvertidos.length - 1].fim
-
-    // Estrutura de repetição que trata os horários a partir do último corte até o momento de encerrar o expediente.
-    while (horarioFinal - temp >= duracaoDoServico) {
-      let conversor = [((temp - (temp % 60)) / 60).toString(), (temp % 60).toString()]
-
-      if (conversor[0].length === 1) {
-        conversor[0] = `0${conversor[0]}`
-      }
-
-      if (conversor[1].length === 1) {
-        conversor[1] = `${conversor[1]}0`
-      }
-
-      horariosDisponiveis.push(conversor.join(':'))
-      temp += 30
-
-    }
-
-    // após tratado os dados de um cabeleireiro, coloca dentro do aray "agendaDisponivel" e vai para o próximo cabeleireiro
-    agendaDisponivel.push({
-      nome: cabeleireiro.nome,
-      horariosDisponiveis: horariosDisponiveis
+    // Passando as informações de cada cabeleireiro para o array que será retornado ao final da função.
+    horariosDisponiveis.push({
+      nome: value.nome,
+      horariosDisponiveis: [...agendaCabeleireiroDisponivel]
     })
   })
-
-  console.log(agendaDisponivel)
-  return agendaDisponivel
-
+  console.log(horariosDisponiveis)
+  return horariosDisponiveis
 }
 
-// chamada da função
-verificarHorarios(solicitacao, agenda)
+verificarHorarios(agenda, solicitacao)
