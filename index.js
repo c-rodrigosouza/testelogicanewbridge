@@ -52,7 +52,7 @@ const agenda = [
 ]
 
 // Função para tratar a disponibilidade de cada cabeleireiro.
-function retornoDisponibilidade(age) {
+function retornarDisponibilidade(age) {
   let agendaCabeleireiro = []
   let horaInicio = age.disponibilidade.inicio
   let horaFim = age.disponibilidade.fim
@@ -93,10 +93,10 @@ function verificarHorarios(arrayAgenda, solic) {
   let tempoNecessario = ((Number(solic.duracaoServico.split(':')[0]) * 60) + Number(solic.duracaoServico.split(':')[1])) / 30
   let horariosDisponiveis = []
 
-  /* Tratando todos os cabeleireiros no array chamando a função retornoDisponibilidade() para saber os horários disponíveis e depois calculando onde
+  /* Tratando todos os cabeleireiros no array chamando a função retornarDisponibilidade() para saber os horários disponíveis e depois calculando onde
   o procedimento que deseja-se agendar se encaixa. Depois disso, coloca os horários disponíveis e possíveis para o procedimento em um array. */
   arrayAgenda.forEach((value) => {
-    let agendaCabeleireiro = retornoDisponibilidade(value)
+    let agendaCabeleireiro = retornarDisponibilidade(value)
     let agendaCabeleireiroDisponivel = []
     agendaCabeleireiro.forEach((val, ind, ele) => {
       if (val !== 'ocupado' && ele.length >= ind + tempoNecessario) {
